@@ -13,26 +13,46 @@
 </head>
 <body>
 <div id="root">
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#171512;color:#786F5F;font-family:-apple-system,sans-serif;font-size:14px;">Loading…</div>
+  <div id="preload-msg" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#171512;color:#F3EFE6;font-family:-apple-system,sans-serif;font-size:18px;font-weight:600;">Loading…</div>
 </div>
 
 <!-- Catches any script failure (CDN blocked, syntax error, etc.) and shows it directly,
-     so the page never just goes blank with no explanation. -->
+     so the page never just goes blank with no explanation. Capture phase (the "true" below)
+     is required to catch <script> load failures, which don't bubble to window otherwise. -->
 <script>
-  window.addEventListener("error", function (e) {
+  function showFatalError(msg, loc) {
     var root = document.getElementById("root");
     if (!root) return;
-    var msg = (e && e.message) || "Unknown error";
-    var loc = e && e.filename ? e.filename.split("/").pop() + ":" + e.lineno : "";
     root.innerHTML =
       '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#171512;padding:24px;font-family:-apple-system,sans-serif;">' +
       '<div style="max-width:360px;text-align:center;">' +
-      '<div style="color:#C97B3D;font-weight:600;margin-bottom:8px;">Something failed to load</div>' +
-      '<div style="color:#A69C8A;font-size:13px;margin-bottom:12px;">Screenshot this whole box and send it back.</div>' +
-      '<div style="color:#786F5F;font-size:12px;font-family:monospace;background:#211E1A;padding:10px;border-radius:8px;word-break:break-word;text-align:left;">' +
+      '<div style="color:#E0995C;font-weight:700;font-size:16px;margin-bottom:8px;">⚠️ Something failed to load</div>' +
+      '<div style="color:#F3EFE6;font-size:13px;margin-bottom:12px;">Screenshot this whole box and send it back.</div>' +
+      '<div style="color:#F3EFE6;font-size:12px;font-family:monospace;background:#211E1A;padding:10px;border-radius:8px;word-break:break-word;text-align:left;border:1px solid #3A352C;">' +
       msg + (loc ? " (" + loc + ")" : "") +
       '</div></div></div>';
-  });
+  }
+  window.addEventListener("error", function (e) {
+    var target = e && e.target;
+    if (target && (target.tagName === "SCRIPT" || target.tagName === "LINK")) {
+      showFatalError("Failed to load a required script: " + (target.src || target.href || "unknown"));
+      return;
+    }
+    var msg = (e && e.message) || "Unknown error";
+    var loc = e && e.filename ? e.filename.split("/").pop() + ":" + e.lineno : "";
+    showFatalError(msg, loc);
+  }, true); // capture: true is required to catch script/link load failures
+
+  // If nothing has replaced the loading placeholder within 8 seconds, something hung
+  // without throwing a catchable error (e.g. a CDN that timed out instead of failing outright).
+  setTimeout(function () {
+    var pre = document.getElementById("preload-msg");
+    if (pre) {
+      showFatalError(
+        "Stuck on loading for 8+ seconds with no error thrown. This usually means a network/firewall is silently blocking unpkg.com or gstatic.com. Try a different WiFi/mobile data, or a different device."
+      );
+    }
+  }, 8000);
 </script>
 
 <!-- ======================================================================
@@ -57,8 +77,8 @@
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
 <!-- Firebase (compat build — plain <script> tags, no bundler needed) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <!-- Babel (lets the browser run JSX directly, no build step) -->
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
