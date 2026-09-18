@@ -694,6 +694,7 @@ function WarehouseOrdersView({ orders, onPick }) {
 function App() {
   const [ready, setReady] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [initError, setInitError] = useState(null);
   const [role, setRole] = useState(null);
   const [userName, setUserName] = useState("");
   const [products, setProducts] = useState([]);
@@ -703,13 +704,18 @@ function App() {
   // One-time seed: if the products collection is empty, load the starter catalog.
   useEffect(() => {
     (async () => {
-      const snap = await productsCol.limit(1).get();
-      if (snap.empty) {
-        const batch = db.batch();
-        SEED_PRODUCTS.forEach((p) => batch.set(productsCol.doc(p.id), p));
-        await batch.commit();
+      try {
+        const snap = await productsCol.limit(1).get();
+        if (snap.empty) {
+          const batch = db.batch();
+          SEED_PRODUCTS.forEach((p) => batch.set(productsCol.doc(p.id), p));
+          await batch.commit();
+        }
+        setReady(true);
+      } catch (err) {
+        console.error("Firestore init failed:", err);
+        setInitError(err && err.message ? err.message : String(err));
       }
-      setReady(true);
     })();
   }, []);
 
@@ -720,7 +726,7 @@ function App() {
     const unsub1 = productsCol.onSnapshot((snap) => {
       setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setConnected(true);
-    }, (err) => console.error("products listener error", err));
+    }, (err) => { console.error("products listener error", err); setInitError(err.message || String(err)); });
     const unsub2 = ordersCol.onSnapshot((snap) => {
       setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     }, (err) => console.error("orders listener error", err));
@@ -750,6 +756,21 @@ function App() {
     await batch.commit();
   };
 
+  if (initError) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.bg, padding: 24 }}>
+        <div style={{ maxWidth: 360, textAlign: "center" }}>
+          <div style={{ color: COLORS.warn, fontWeight: 600, marginBottom: 8 }}>Couldn't connect to the database</div>
+          <div style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 12 }}>
+            Check that Firestore is created and its Rules are published (see README), and that the config values in index.html are correct.
+          </div>
+          <div style={{ color: COLORS.textFaint, fontSize: 12, fontFamily: "monospace", background: COLORS.surface, padding: 10, borderRadius: 8, wordBreak: "break-word" }}>
+            {initError}
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (!ready) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.bg, color: COLORS.textFaint }}>Loading…</div>;
   if (!role) return <LoginScreen onLogin={handleLogin} />;
 
