@@ -212,51 +212,101 @@ function statusBadge(status) {
   return map[status] || map.submitted;
 }
 
-function LoginScreen({ onLogin }) {
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("store");
+function ArcReactor({ size = 64 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center px-5" style={{ background: COLORS.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px" }}>
-      <div style={{ width: "100%", maxWidth: 384 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 32 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "#B8863E22" }}>
-            <Icon.Package size={18} />
-          </div>
-          <span style={{ color: COLORS.text, fontWeight: 600, fontSize: 18 }}>Posh Glass Stock</span>
+    <svg width={size} height={size} viewBox="0 0 100 100">
+      <defs>
+        <radialGradient id="arcGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="55%" stopColor="#8fe8ff" />
+          <stop offset="100%" stopColor="#2596c9" />
+        </radialGradient>
+      </defs>
+      <circle cx="50" cy="50" r="48" fill="none" stroke="#C9A227" strokeWidth="2" opacity="0.55" />
+      <circle cx="50" cy="50" r="38" fill="#150808" stroke="#8a1414" strokeWidth="3" />
+      <circle cx="50" cy="50" r="30" fill="none" stroke="#C9A227" strokeWidth="1.5" opacity="0.8" />
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
+        const a = (deg * Math.PI) / 180;
+        return (
+          <line key={deg} x1={50 + Math.cos(a) * 19} y1={50 + Math.sin(a) * 19} x2={50 + Math.cos(a) * 28} y2={50 + Math.sin(a) * 28}
+            stroke="#7fd8ff" strokeWidth="2.2" strokeLinecap="round" opacity="0.75" />
+        );
+      })}
+      <circle cx="50" cy="50" r="16" fill="url(#arcGlow)" />
+      <circle cx="50" cy="50" r="8.5" fill="#eafcff" />
+    </svg>
+  );
+}
+
+function LoginScreen({ onLogin }) {
+  const IM = { bg0: "#0c0605", bg1: "#1a0a0a", red: "#9E1B1B", redBright: "#C62828", gold: "#C9A227", goldBright: "#E8C158", text: "#F5E6C8", textMuted: "#C9A0A0" };
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px",
+      background: `radial-gradient(circle at 50% 28%, ${IM.bg1} 0%, ${IM.bg0} 60%, #030202 100%)` }}>
+      <div style={{ width: "100%", maxWidth: 384, textAlign: "center" }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+          <ArcReactor size={72} />
         </div>
-        <h1 style={{ color: COLORS.text, fontWeight: 600, fontSize: 24, marginBottom: 4, letterSpacing: "-0.01em" }}>Sign in</h1>
-        <p style={{ color: COLORS.textMuted, fontSize: 14, marginBottom: 24 }}>Track inventory, place orders, and pick stock.</p>
-        <label style={{ display: "block", fontSize: 14, marginBottom: 6, color: COLORS.textMuted }}>Your name</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Priya"
-          style={{ width: "100%", marginBottom: 20, padding: "10px 14px", borderRadius: 8, outline: "none", background: COLORS.surface, border: `1px solid ${COLORS.borderStrong}`, color: COLORS.text }} />
-        <label style={{ display: "block", fontSize: 14, marginBottom: 8, color: COLORS.textMuted }}>You're signing in as</label>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 28 }}>
-          {[{ key: "store", label: "Store", icon: Icon.Cart }, { key: "warehouse", label: "Warehouse", icon: Icon.Warehouse }].map(({ key, label, icon: Ic }) => (
-            <button key={key} onClick={() => setRole(key)}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "14px 0", borderRadius: 8,
-                background: role === key ? "#B8863E1F" : COLORS.surface, border: role === key ? `1px solid ${COLORS.accent}` : `1px solid ${COLORS.borderStrong}`,
-                color: role === key ? COLORS.accentText : COLORS.textMuted }}>
-              <Ic size={18} /><span style={{ fontSize: 14 }}>{label}</span>
+        <h1 style={{ color: IM.goldBright, fontWeight: 800, fontSize: 23, marginBottom: 6, letterSpacing: "0.03em", textShadow: "0 0 18px #C9A22766" }}>
+          POSH GLASS STOCK
+        </h1>
+        <div style={{ width: 40, height: 3, background: IM.red, margin: "0 auto 12px", borderRadius: 2 }} />
+        <p style={{ color: IM.textMuted, fontSize: 13, marginBottom: 32 }}>Suit up. Choose your station.</p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {[
+            { key: "store", label: "Store", sub: "Place orders", icon: Icon.Cart },
+            { key: "warehouse", label: "Warehouse", sub: "Pick & manage stock", icon: Icon.Warehouse },
+          ].map(({ key, label, sub, icon: Ic }) => (
+            <button key={key} onClick={() => onLogin(key)}
+              style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", borderRadius: 12, textAlign: "left",
+                background: `linear-gradient(135deg, ${IM.bg1} 0%, #2a0d0d 100%)`,
+                border: `1.5px solid ${IM.gold}`, boxShadow: "0 4px 18px #00000066" }}>
+              <div style={{ width: 44, height: 44, borderRadius: 99, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                background: `radial-gradient(circle, ${IM.redBright} 0%, ${IM.red} 100%)`, border: `1.5px solid ${IM.goldBright}` }}>
+                <Ic size={20} color={IM.goldBright} />
+              </div>
+              <div>
+                <div style={{ color: IM.goldBright, fontWeight: 700, fontSize: 16, letterSpacing: "0.02em" }}>{label.toUpperCase()}</div>
+                <div style={{ color: IM.textMuted, fontSize: 12 }}>{sub}</div>
+              </div>
             </button>
           ))}
         </div>
-        <button disabled={!name.trim()} onClick={() => onLogin(name.trim(), role)}
-          style={{ width: "100%", padding: "12px 0", borderRadius: 8, fontSize: 14, fontWeight: 600,
+      </div>
+    </div>
+  );
+}
+
+// Small named-confirmation sheet, reused both when a store submits an order and when
+// warehouse marks one picked — so every order always records who actually did it.
+function NamePrompt({ title, subtitle, confirmLabel, onConfirm, onClose }) {
+  const [name, setName] = useState("");
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "flex-end", justifyContent: "center", background: "#000000AA" }} onClick={onClose}>
+      <div style={{ width: "100%", maxWidth: 384, borderRadius: "16px 16px 0 0", padding: 16, background: COLORS.surface, border: `1px solid ${COLORS.borderStrong}` }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: subtitle ? 4 : 10 }}>
+          <div style={{ fontSize: 15, color: COLORS.text, fontWeight: 600 }}>{title}</div>
+          <button onClick={onClose} style={{ color: COLORS.textMuted, background: "none", border: "none" }}><Icon.X size={18} /></button>
+        </div>
+        {subtitle && <div style={{ fontSize: 12, color: COLORS.textFaint, marginBottom: 12 }}>{subtitle}</div>}
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name"
+          onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) onConfirm(name.trim()); }}
+          style={{ width: "100%", marginBottom: 12, padding: "10px 12px", borderRadius: 8, outline: "none", background: COLORS.bg, border: `1px solid ${COLORS.borderStrong}`, color: COLORS.text, fontSize: 14 }} />
+        <button disabled={!name.trim()} onClick={() => onConfirm(name.trim())}
+          style={{ width: "100%", padding: "10px 0", borderRadius: 8, fontSize: 14, fontWeight: 600,
             background: name.trim() ? COLORS.accent : COLORS.borderStrong, color: name.trim() ? COLORS.bg : "#786F5F", border: "none" }}>
-          Continue
+          {confirmLabel || "Confirm"}
         </button>
       </div>
     </div>
   );
 }
 
-function Header({ userName, role, onLogout, connected }) {
+function Header({ role, onLogout, connected }) {
   return (
     <div style={{ position: "sticky", top: 0, zIndex: 20, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.bg, borderBottom: `1px solid ${COLORS.border}` }}>
-      <div>
-        <div style={{ fontSize: 14, color: COLORS.text, fontWeight: 600 }}>{userName}</div>
-        <div style={{ fontSize: 12, color: COLORS.textMuted }}>{role === "store" ? "Store" : "Warehouse"}</div>
-      </div>
+      <div style={{ fontSize: 14, color: COLORS.text, fontWeight: 600 }}>{role === "store" ? "Store" : "Warehouse"}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: COLORS.textFaint }}>
           <span style={{ width: 6, height: 6, borderRadius: 99, background: connected ? COLORS.success : COLORS.warn, display: "inline-block" }} />
@@ -378,6 +428,7 @@ function StoreOrderViewImpl({ products, onSubmitOrder, categories }) {
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [view, setView] = useState("grid");
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
   const setQty = (id, qty) => setCart((c) => ({ ...c, [id]: Math.max(0, qty) }));
   const filtered = useMemo(() => filterProducts(products, category, query), [products, category, query]);
   const grouped = useMemo(() => groupByCategory(filtered, categories), [filtered, categories]);
@@ -387,7 +438,8 @@ function StoreOrderViewImpl({ products, onSubmitOrder, categories }) {
     return p ? { productId: id, name: p.name, sku: p.sku, unitCost: p.cost, image: p.image, qtyRequested: q } : null;
   }).filter(Boolean), [cart, products]);
   const total = items.reduce((s, i) => s + i.unitCost * i.qtyRequested, 0);
-  const submit = () => { if (items.length === 0) return; onSubmitOrder(items); setCart({}); };
+  const openSubmitPrompt = () => { if (items.length === 0) return; setShowNamePrompt(true); };
+  const confirmSubmit = (name) => { onSubmitOrder(items, name); setCart({}); setShowNamePrompt(false); };
 
   const renderCard = (p) => {
     const qty = cart[p.id] || 0;
@@ -448,9 +500,13 @@ function StoreOrderViewImpl({ products, onSubmitOrder, categories }) {
               <div style={{ fontSize: 12, color: COLORS.textMuted }}>{items.length} item{items.length > 1 ? "s" : ""}</div>
               <div style={{ fontSize: 16, color: COLORS.text, fontWeight: 600 }}>{money(total)}</div>
             </div>
-            <button onClick={submit} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 14, background: COLORS.accent, color: COLORS.bg, fontWeight: 600, border: "none" }}>Submit order</button>
+            <button onClick={openSubmitPrompt} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 14, background: COLORS.accent, color: COLORS.bg, fontWeight: 600, border: "none" }}>Submit order</button>
           </div>
         </div>
+      )}
+      {showNamePrompt && (
+        <NamePrompt title="Who's placing this order?" subtitle={`${items.length} item${items.length > 1 ? "s" : ""} · ${money(total)}`}
+          confirmLabel="Submit order" onConfirm={confirmSubmit} onClose={() => setShowNamePrompt(false)} />
       )}
     </div>
   );
@@ -501,19 +557,22 @@ function printInvoice(order) {
   w.focus();
 }
 
-function StoreOrdersView({ orders, userName }) {
-  const mine = orders.filter((o) => o.storeName === userName).sort((a, b) => b.createdAt - a.createdAt);
-  if (mine.length === 0) return <div style={{ padding: "40px 20px", fontSize: 14, textAlign: "center", color: COLORS.textFaint }}>No orders yet. Place one from the Order tab.</div>;
+function StoreOrdersView({ orders }) {
+  const all = [...orders].sort((a, b) => b.createdAt - a.createdAt);
+  if (all.length === 0) return <div style={{ padding: "40px 20px", fontSize: 14, textAlign: "center", color: COLORS.textFaint }}>No orders yet. Place one from the Order tab.</div>;
   return (
     <div style={{ padding: "0 20px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
-      {mine.map((o) => {
+      {all.map((o) => {
         const badge = statusBadge(o.status);
         const total = o.items.reduce((s, i) => s + i.unitCost * (o.status === "picked" ? i.qtyPicked : i.qtyRequested), 0);
         return (
           <div key={o.id} style={{ padding: 16, borderRadius: 12, background: COLORS.surface, border: `1px solid ${COLORS.border}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-              <span style={{ fontSize: 12, color: COLORS.textFaint }}>{new Date(o.createdAt).toLocaleDateString()} · {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-              <span style={{ fontSize: 12, padding: "4px 8px", borderRadius: 99, background: badge.bg, color: badge.fg, fontWeight: 600 }}>{badge.label}</span>
+              <div>
+                <div style={{ fontSize: 13, color: COLORS.text, fontWeight: 600 }}>{o.storeName}</div>
+                <span style={{ fontSize: 12, color: COLORS.textFaint }}>{new Date(o.createdAt).toLocaleDateString()} · {new Date(o.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+              <span style={{ fontSize: 12, padding: "4px 8px", borderRadius: 99, background: badge.bg, color: badge.fg, fontWeight: 600, height: "fit-content" }}>{badge.label}</span>
             </div>
             {o.items.map((i, idx) => (
               <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 14, padding: "4px 0" }}>
@@ -752,10 +811,10 @@ function InventoryView({ products, onAdd, onUpdate, onRemove, categories, onAddC
     </button>
   );
 
-  const renderRow = (p) => {
+  function ProductRow({ p }) {
     const lp = useLongPress(() => setDeletingProduct(p));
     return (
-      <div key={p.id} {...lp} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 12, background: COLORS.surface, border: `1px solid ${COLORS.border}`, userSelect: "none" }}>
+      <div {...lp} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 12, background: COLORS.surface, border: `1px solid ${COLORS.border}`, userSelect: "none" }}>
         <button onClick={() => setEditingImageFor(p)} style={{ position: "relative", background: "none", border: "none", padding: 0, flexShrink: 0 }}>
           <Thumb product={p} />
           <div style={{ position: "absolute", bottom: -4, right: -4, width: 16, height: 16, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.accent, border: `2px solid ${COLORS.surface}` }}><Icon.Camera size={9} /></div>
@@ -789,12 +848,12 @@ function InventoryView({ products, onAdd, onUpdate, onRemove, categories, onAddC
         )}
       </div>
     );
-  };
+  }
 
-  const renderCard = (p) => {
+  function ProductCard({ p }) {
     const lp = useLongPress(() => setDeletingProduct(p));
     return (
-      <div key={p.id} {...lp} style={{ borderRadius: 12, overflow: "hidden", background: COLORS.surface, border: `1px solid ${COLORS.border}`, userSelect: "none" }}>
+      <div {...lp} style={{ borderRadius: 12, overflow: "hidden", background: COLORS.surface, border: `1px solid ${COLORS.border}`, userSelect: "none" }}>
         <button onClick={() => setEditingImageFor(p)} style={{ position: "relative", display: "block", width: "100%", aspectRatio: "1/1", background: "none", border: "none", padding: 0 }}>
           <Thumb product={p} size={"100%"} rounded={0} />
           <div style={{ position: "absolute", bottom: 6, right: 6, width: 24, height: 24, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", background: "#171512CC" }}><Icon.Camera size={12} /></div>
@@ -828,7 +887,7 @@ function InventoryView({ products, onAdd, onUpdate, onRemove, categories, onAddC
         </div>
       </div>
     );
-  };
+  }
 
   return (
     <div style={{ paddingBottom: 40 }}>
@@ -845,10 +904,10 @@ function InventoryView({ products, onAdd, onUpdate, onRemove, categories, onAddC
           ? categories.map((c) => grouped[c.key] && grouped[c.key].length > 0 ? (
               <div key={c.key} style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 12, marginBottom: 8, color: COLORS.textFaint, fontWeight: 600 }}>{c.label.toUpperCase()} · {grouped[c.key].length}</div>
-                <div style={{ display: view === "grid" ? "grid" : "flex", gridTemplateColumns: view === "grid" ? "1fr 1fr" : undefined, flexDirection: view === "list" ? "column" : undefined, gap: 10 }}>{grouped[c.key].map(view === "grid" ? renderCard : renderRow)}</div>
+                <div style={{ display: view === "grid" ? "grid" : "flex", gridTemplateColumns: view === "grid" ? "1fr 1fr" : undefined, flexDirection: view === "list" ? "column" : undefined, gap: 10 }}>{grouped[c.key].map((p) => view === "grid" ? <ProductCard key={p.id} p={p} /> : <ProductRow key={p.id} p={p} />)}</div>
               </div>
             ) : null)
-          : <div style={{ display: view === "grid" ? "grid" : "flex", gridTemplateColumns: view === "grid" ? "1fr 1fr" : undefined, flexDirection: view === "list" ? "column" : undefined, gap: 10 }}>{filtered.map(view === "grid" ? renderCard : renderRow)}</div>}
+          : <div style={{ display: view === "grid" ? "grid" : "flex", gridTemplateColumns: view === "grid" ? "1fr 1fr" : undefined, flexDirection: view === "list" ? "column" : undefined, gap: 10 }}>{filtered.map((p) => view === "grid" ? <ProductCard key={p.id} p={p} /> : <ProductRow key={p.id} p={p} />)}</div>}
         {filtered.length === 0 && <div style={{ fontSize: 14, textAlign: "center", padding: "40px 0", color: COLORS.textFaint }}>No products match.</div>}
       </div>
       {editingImageFor && (
@@ -887,14 +946,15 @@ function WarehouseOrdersView({ orders, onPick, onDeleteOrder }) {
   const [editingId, setEditingId] = useState(null);
   const [editRows, setEditRows] = useState({});
   const [deletingOrder, setDeletingOrder] = useState(null);
+  const [pickingOrder, setPickingOrder] = useState(null);
   const startPick = (order) => {
     setEditingId(order.id); setOpenId(order.id);
     const rows = {}; order.items.forEach((i, idx) => { rows[idx] = { qtyPicked: i.qtyRequested, remark: "" }; });
     setEditRows(rows);
   };
-  const confirmPick = (order) => {
+  const confirmPick = (order, name) => {
     const pickedItems = order.items.map((i, idx) => ({ ...i, qtyPicked: Math.max(0, parseInt(editRows[idx]?.qtyPicked ?? i.qtyRequested) || 0), remark: (editRows[idx]?.remark || "").trim() }));
-    onPick(order.id, pickedItems); setEditingId(null);
+    onPick(order.id, pickedItems, name); setEditingId(null); setPickingOrder(null);
   };
   const sorted = [...orders].sort((a, b) => { if (a.status !== b.status) return a.status === "submitted" ? -1 : 1; return b.createdAt - a.createdAt; });
   if (sorted.length === 0) return <div style={{ padding: "40px 20px", fontSize: 14, textAlign: "center", color: COLORS.textFaint }}>No orders from stores yet.</div>;
@@ -961,7 +1021,7 @@ function WarehouseOrdersView({ orders, onPick, onDeleteOrder }) {
                 {isEditing && (
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={() => setEditingId(null)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, fontSize: 14, background: COLORS.surfaceAlt, color: COLORS.textMuted, border: "none" }}>Cancel</button>
-                    <button onClick={() => confirmPick(o)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, fontSize: 14, background: COLORS.success, color: COLORS.bg, fontWeight: 600, border: "none" }}>Confirm pick</button>
+                    <button onClick={() => setPickingOrder(o)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, fontSize: 14, background: COLORS.success, color: COLORS.bg, fontWeight: 600, border: "none" }}>Confirm pick</button>
                   </div>
                 )}
                 {o.status === "picked" && <div style={{ fontSize: 12, color: COLORS.textFaint, marginBottom: 10 }}>Picked by {o.pickedBy} · {new Date(o.pickedAt).toLocaleString()}</div>}
@@ -977,6 +1037,10 @@ function WarehouseOrdersView({ orders, onPick, onDeleteOrder }) {
         <DeleteOrderConfirm order={deletingOrder} onClose={() => setDeletingOrder(null)}
           onConfirm={(id) => { onDeleteOrder(id); setDeletingOrder(null); }} />
       )}
+      {pickingOrder && (
+        <NamePrompt title="Who's picking this order?" confirmLabel="Confirm pick"
+          onConfirm={(name) => confirmPick(pickingOrder, name)} onClose={() => setPickingOrder(null)} />
+      )}
     </div>
   );
 }
@@ -986,7 +1050,6 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [initError, setInitError] = useState(null);
   const [role, setRole] = useState(null);
-  const [userName, setUserName] = useState("");
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
@@ -1033,11 +1096,11 @@ function App() {
     return () => { unsub1(); unsub2(); unsub3(); };
   }, [ready]);
 
-  const handleLogin = (name, r) => { setUserName(name); setRole(r); setTab(r === "store" ? "order" : "orders"); };
+  const handleLogin = (r) => { setRole(r); setTab(r === "store" ? "order" : "orders"); };
   const handleLogout = () => { setRole(null); setUserName(""); };
 
-  const submitOrder = async (items) => {
-    const order = { id: uid("ord"), storeName: userName, items, status: "submitted", createdAt: Date.now() };
+  const submitOrder = async (items, name) => {
+    const order = { id: uid("ord"), storeName: name, items, status: "submitted", createdAt: Date.now() };
     await ordersCol.doc(order.id).set(order);
   };
   const addProduct = async (product) => { await productsCol.doc(product.id).set(product); };
@@ -1057,11 +1120,11 @@ function App() {
     await categoriesDoc.set({ list: nextList });
     return key;
   };
-  const pickOrder = async (orderId, pickedItems) => {
+  const pickOrder = async (orderId, pickedItems, name) => {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
     const batch = db.batch();
-    batch.update(ordersCol.doc(orderId), { status: "picked", items: pickedItems, pickedBy: userName, pickedAt: Date.now() });
+    batch.update(ordersCol.doc(orderId), { status: "picked", items: pickedItems, pickedBy: name, pickedAt: Date.now() });
     const deltas = {};
     pickedItems.forEach((i) => { deltas[i.productId] = (deltas[i.productId] || 0) + i.qtyPicked; });
     Object.entries(deltas).forEach(([productId, qty]) => {
@@ -1089,15 +1152,15 @@ function App() {
   if (!ready) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.bg, color: COLORS.textFaint }}>Loading…</div>;
   if (!role) return <LoginScreen onLogin={handleLogin} />;
 
-  const storeTabs = [{ key: "order", label: "Order" }, { key: "history", label: "My orders" }];
+  const storeTabs = [{ key: "order", label: "Order" }, { key: "history", label: "Orders" }];
   const warehouseTabs = [{ key: "orders", label: "Orders" }, { key: "inventory", label: "Inventory" }];
 
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
-      <Header userName={userName} role={role} onLogout={handleLogout} connected={connected} />
+      <Header role={role} onLogout={handleLogout} connected={connected} />
       <Tabs tabs={role === "store" ? storeTabs : warehouseTabs} active={tab} onChange={setTab} />
       {role === "store" && tab === "order" && <StoreOrderViewImpl products={products} onSubmitOrder={submitOrder} categories={categories} />}
-      {role === "store" && tab === "history" && <StoreOrdersView orders={orders} userName={userName} />}
+      {role === "store" && tab === "history" && <StoreOrdersView orders={orders} />}
       {role === "warehouse" && tab === "orders" && <WarehouseOrdersView orders={orders} onPick={pickOrder} onDeleteOrder={deleteOrder} />}
       {role === "warehouse" && tab === "inventory" && (
         <InventoryView products={products} onAdd={addProduct} onUpdate={updateProduct} onRemove={removeProduct} categories={categories} onAddCategory={addCategory} />
@@ -1106,8 +1169,41 @@ function App() {
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null, info: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    this.setState({ info });
+    console.error("React crash:", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      const e = this.state.error;
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#171512", padding: 24, fontFamily: "-apple-system,sans-serif" }}>
+          <div style={{ maxWidth: 480, textAlign: "left" }}>
+            <div style={{ color: "#E0995C", fontWeight: 700, fontSize: 16, marginBottom: 8, textAlign: "center" }}>⚠️ The app crashed</div>
+            <div style={{ color: "#F3EFE6", fontSize: 13, marginBottom: 12, textAlign: "center" }}>Screenshot this whole box and send it back.</div>
+            <div style={{ color: "#F3EFE6", fontSize: 12, fontFamily: "monospace", background: "#211E1A", padding: 10, borderRadius: 8, wordBreak: "break-word", border: "1px solid #3A352C", maxHeight: "50vh", overflow: "auto", whiteSpace: "pre-wrap" }}>
+              {String(e && (e.stack || e.message) || e)}
+              {this.state.info && this.state.info.componentStack ? "\n\n--- component stack ---" + this.state.info.componentStack : ""}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+root.render(<ErrorBoundary><App /></ErrorBoundary>);
 </script>
 </body>
 </html>
+
