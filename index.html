@@ -102,6 +102,12 @@ const { useState, useEffect, useMemo, useRef } = React;
 // ---------------------------------------------------------------------
 firebase.initializeApp(window.FIREBASE_CONFIG);
 const db = firebase.firestore();
+// Lets reads/writes survive a brief signal drop by queuing locally and syncing once back
+// online, instead of failing outright. Wrapped defensively since some browsers/multi-tab
+// situations can decline this — the app still works fine without it, just less resilient.
+try {
+  db.enablePersistence({ synchronizeTabs: true }).catch((err) => console.warn("Offline persistence not enabled:", err.code));
+} catch (e) {}
 const productsCol = db.collection("products");
 const ordersCol = db.collection("orders");
 const categoriesDoc = db.collection("meta").doc("categories");
@@ -1179,6 +1185,7 @@ function WarehouseOrdersView({ orders, products, onPick, onDeleteOrder, onCleanu
 
 function App() {
   const [ready, setReady] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [connected, setConnected] = useState(false);
   const [initError, setInitError] = useState(null);
   const [role, setRole] = useState(() => {
@@ -1194,26 +1201,38 @@ function App() {
 
   // One-time seed: if the products collection is empty, load the starter catalog;
   // same for the categories doc, so "Small Bongs / Big Bongs / Bowls / Bubblers" exist from day one.
+  // Retries a few times with backoff first — a single dropped request on a shaky connection
+  // shouldn't strand someone on the error screen needing to reload.
   useEffect(() => {
+    let cancelled = false;
     (async () => {
-      try {
-        const snap = await productsCol.limit(1).get();
-        if (snap.empty) {
-          const batch = db.batch();
-          SEED_PRODUCTS.forEach((p) => batch.set(productsCol.doc(p.id), p));
-          await batch.commit();
+      const attempts = 4;
+      for (let i = 0; i < attempts; i++) {
+        try {
+          const snap = await productsCol.limit(1).get();
+          if (snap.empty) {
+            const batch = db.batch();
+            SEED_PRODUCTS.forEach((p) => batch.set(productsCol.doc(p.id), p));
+            await batch.commit();
+          }
+          const catDoc = await categoriesDoc.get();
+          if (!catDoc.exists) {
+            await categoriesDoc.set({ list: DEFAULT_CATEGORIES });
+          }
+          if (!cancelled) setReady(true);
+          return;
+        } catch (err) {
+          console.error(`Firestore init attempt ${i + 1} failed:`, err);
+          if (i === attempts - 1) {
+            if (!cancelled) setInitError(err && err.message ? err.message : String(err));
+          } else {
+            await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+          }
         }
-        const catDoc = await categoriesDoc.get();
-        if (!catDoc.exists) {
-          await categoriesDoc.set({ list: DEFAULT_CATEGORIES });
-        }
-        setReady(true);
-      } catch (err) {
-        console.error("Firestore init failed:", err);
-        setInitError(err && err.message ? err.message : String(err));
       }
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [retryKey]);
 
   // Live listeners — every connected device gets pushed updates the instant
   // anyone changes a quantity, price, photo, category, or order.
@@ -1249,6 +1268,20 @@ function App() {
   // Cart quantity changes go through a transaction so two phones tapping +/- on the same
   // product at the same moment both land correctly instead of one overwriting the other.
   const adjustCartQty = async (product, delta) => {
+    // Update the local view immediately so the tap feels instant even on a slow connection —
+    // the live listener confirms (or corrects) this against the real value a moment later.
+    setCart((prev) => {
+      const idx = prev.findIndex((i) => i.productId === product.id);
+      if (idx === -1) {
+        if (delta <= 0) return prev;
+        return [...prev, { productId: product.id, sku: product.sku, name: product.name, image: product.image, unitCost: product.cost, qty: delta, remark: "" }];
+      }
+      const next = Math.max(0, prev[idx].qty + delta);
+      if (next === 0) return prev.filter((i) => i.productId !== product.id);
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], qty: next };
+      return copy;
+    });
     const ref = cartCol.doc(product.id);
     try {
       await db.runTransaction(async (tx) => {
@@ -1338,11 +1371,14 @@ function App() {
         <div style={{ maxWidth: 360, textAlign: "center" }}>
           <div style={{ color: COLORS.warn, fontWeight: 600, marginBottom: 8 }}>Couldn't connect to the database</div>
           <div style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 12 }}>
-            Check that Firestore is created and its Rules are published (see README), and that the config values in index.html are correct.
+            This is often just a dropped connection — try again first. If it keeps happening, check that Firestore is created and its Rules are published (see README), and that the config values in index.html are correct.
           </div>
-          <div style={{ color: COLORS.textFaint, fontSize: 12, fontFamily: "monospace", background: COLORS.surface, padding: 10, borderRadius: 8, wordBreak: "break-word" }}>
+          <div style={{ color: COLORS.textFaint, fontSize: 12, fontFamily: "monospace", background: COLORS.surface, padding: 10, borderRadius: 8, wordBreak: "break-word", marginBottom: 16 }}>
             {initError}
           </div>
+          <button onClick={() => { setInitError(null); setRetryKey((k) => k + 1); }} style={{ padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, background: COLORS.accent, color: COLORS.bg, border: "none" }}>
+            Try again
+          </button>
         </div>
       </div>
     );
