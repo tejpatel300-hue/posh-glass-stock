@@ -312,7 +312,7 @@ function Header({ role, onLogout, connected }) {
           <span style={{ width: 6, height: 6, borderRadius: 99, background: connected ? COLORS.success : COLORS.warn, display: "inline-block" }} />
           {connected ? "Live" : "Connecting…"}
         </div>
-        <button onClick={onLogout} style={{ padding: 8, borderRadius: 8, color: COLORS.textMuted, background: "none", border: "none" }}>
+        <button onClick={() => { try { onLogout(); } catch (err) { alert("LOGOUT ERROR: " + (err && (err.stack || err.message) || err)); } }} style={{ padding: 8, borderRadius: 8, color: COLORS.textMuted, background: "none", border: "none" }}>
           <Icon.Logout size={17} />
         </button>
       </div>
