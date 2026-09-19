@@ -1023,12 +1023,17 @@ function DeleteOrderConfirm({ order, onConfirm, onClose }) {
   );
 }
 
-function WarehouseOrdersView({ orders, onPick, onDeleteOrder }) {
+function WarehouseOrdersView({ orders, products, onPick, onDeleteOrder, onCleanupOld }) {
   const [openId, setOpenId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editRows, setEditRows] = useState({});
   const [deletingOrder, setDeletingOrder] = useState(null);
   const [pickingOrder, setPickingOrder] = useState(null);
+  const [showCleanup, setShowCleanup] = useState(false);
+  const productImage = (productId) => { const p = products.find((p) => p.id === productId); return p ? p.image : null; };
+  const CLEANUP_DAYS = 30;
+  const cleanupCutoff = Date.now() - CLEANUP_DAYS * 24 * 60 * 60 * 1000;
+  const cleanupCount = orders.filter((o) => o.status === "picked" && (o.pickedAt || o.createdAt) < cleanupCutoff).length;
   const startPick = (order) => {
     setEditingId(order.id); setOpenId(order.id);
     const rows = {}; order.items.forEach((i, idx) => { rows[idx] = { qtyPicked: i.qtyRequested, remark: i.remark || "" }; });
@@ -1039,9 +1044,15 @@ function WarehouseOrdersView({ orders, onPick, onDeleteOrder }) {
     onPick(order.id, pickedItems, name); setEditingId(null); setPickingOrder(null);
   };
   const sorted = [...orders].sort((a, b) => { if (a.status !== b.status) return a.status === "submitted" ? -1 : 1; return b.createdAt - a.createdAt; });
-  if (sorted.length === 0) return <div style={{ padding: "40px 20px", fontSize: 14, textAlign: "center", color: COLORS.textFaint }}>No orders from stores yet.</div>;
+  if (sorted.length === 0 && cleanupCount === 0) return <div style={{ padding: "40px 20px", fontSize: 14, textAlign: "center", color: COLORS.textFaint }}>No orders from stores yet.</div>;
   return (
     <div style={{ padding: "0 20px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+      {cleanupCount > 0 && (
+        <button onClick={() => setShowCleanup(true)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 10, background: COLORS.surface, border: `1px dashed ${COLORS.borderStrong}`, textAlign: "left" }}>
+          <span style={{ fontSize: 12, color: COLORS.textMuted }}>{cleanupCount} picked order{cleanupCount > 1 ? "s" : ""} older than {CLEANUP_DAYS} days — free up space?</span>
+          <span style={{ fontSize: 12, color: COLORS.accent, fontWeight: 600, flexShrink: 0, marginLeft: 8 }}>Clean up</span>
+        </button>
+      )}
       {sorted.map((o) => {
         const badge = statusBadge(o.status);
         const isOpen = openId === o.id;
@@ -1066,7 +1077,7 @@ function WarehouseOrdersView({ orders, onPick, onDeleteOrder }) {
                 <div style={{ borderRadius: 8, overflow: "hidden", marginBottom: 12, border: `1px solid ${COLORS.border}` }}>
                   {o.items.map((i, idx) => (
                     <div key={idx} style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, borderTop: idx === 0 ? "none" : `1px solid ${COLORS.border}` }}>
-                      <Thumb product={{ id: i.productId, image: i.image, sku: i.sku }} size={36} />
+                      <Thumb product={{ id: i.productId, image: productImage(i.productId) || i.image, sku: i.sku }} size={36} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "#D9D2C4" }}>{i.name || i.sku}</div>
                         <div style={{ fontSize: 12, color: COLORS.textFaint }}>{money(i.unitCost)} / unit</div>
@@ -1125,6 +1136,20 @@ function WarehouseOrdersView({ orders, onPick, onDeleteOrder }) {
       {pickingOrder && (
         <NamePrompt title="Who's picking this order?" confirmLabel="Confirm pick"
           onConfirm={(name) => confirmPick(pickingOrder, name)} onClose={() => setPickingOrder(null)} />
+      )}
+      {showCleanup && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "flex-end", justifyContent: "center", background: "#000000AA" }} onClick={() => setShowCleanup(false)}>
+          <div style={{ width: "100%", maxWidth: 384, borderRadius: "16px 16px 0 0", padding: 16, background: COLORS.surface, border: `1px solid ${COLORS.borderStrong}` }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 15, color: COLORS.text, fontWeight: 600, marginBottom: 6 }}>Clean up old orders?</div>
+            <div style={{ fontSize: 13, color: COLORS.textFaint, marginBottom: 16 }}>
+              This permanently deletes {cleanupCount} picked order{cleanupCount > 1 ? "s" : ""} completed more than {CLEANUP_DAYS} days ago. Pending orders are never touched. This can't be undone.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowCleanup(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, fontSize: 14, background: COLORS.bg, color: COLORS.textMuted, border: `1px solid ${COLORS.borderStrong}` }}>Cancel</button>
+              <button onClick={() => { onCleanupOld(CLEANUP_DAYS); setShowCleanup(false); }} style={{ flex: 1, padding: "10px 0", borderRadius: 8, fontSize: 14, background: COLORS.warn, color: COLORS.bg, fontWeight: 600, border: "none" }}>Delete {cleanupCount}</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1234,16 +1259,30 @@ function App() {
     await batch.commit();
   };
   const submitCartOrder = async (name) => {
-    if (cart.length === 0) return;
-    const items = cart.map((c) => ({ productId: c.productId, name: c.name, sku: c.sku, unitCost: c.unitCost, image: c.image, qtyRequested: c.qty, remark: c.remark || "" }));
+    // Read straight from Firestore rather than the local `cart` state — closes a race where a
+    // remark typed a moment ago might not have synced back through the listener yet.
+    const snap = await cartCol.get();
+    const liveCart = snap.docs.map((d) => ({ productId: d.id, ...d.data() })).filter((i) => (i.qty || 0) > 0);
+    if (liveCart.length === 0) return;
+    const items = liveCart.map((c) => ({ productId: c.productId, name: c.name, sku: c.sku, unitCost: c.unitCost, qtyRequested: c.qty, remark: c.remark || "" }));
     const order = { id: uid("ord"), storeName: name, items, status: "submitted", createdAt: Date.now() };
     await ordersCol.doc(order.id).set(order);
-    await clearCart();
+    const batch = db.batch();
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
   };
   const addProduct = async (product) => { await productsCol.doc(product.id).set(product); };
   const updateProduct = async (id, patch) => { await productsCol.doc(id).update(patch); };
   const removeProduct = async (id) => { await productsCol.doc(id).delete(); };
   const deleteOrder = async (id) => { await ordersCol.doc(id).delete(); };
+  const cleanupOldOrders = async (days) => {
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const stale = orders.filter((o) => o.status === "picked" && (o.pickedAt || o.createdAt) < cutoff);
+    if (stale.length === 0) return;
+    const batch = db.batch();
+    stale.forEach((o) => batch.delete(ordersCol.doc(o.id)));
+    await batch.commit();
+  };
   // Adds a new category (e.g. "Torches") to the shared list. Returns the new key so the
   // caller can immediately assign it to the product being edited.
   const addCategory = async (label) => {
@@ -1304,7 +1343,7 @@ function App() {
       {role === "store" && tab === "order" && <StoreOrderViewImpl products={products} cart={cart} onAdjustQty={adjustCartQty} categories={categories} onViewCart={() => setTab("cart")} />}
       {role === "store" && tab === "cart" && <CartView cart={cart} onSetQty={setCartQty} onRemove={removeCartItem} onSetRemark={setCartRemark} onClear={clearCart} onSubmit={submitCartOrder} />}
       {role === "store" && tab === "history" && <StoreOrdersView orders={orders} />}
-      {role === "warehouse" && tab === "orders" && <WarehouseOrdersView orders={orders} onPick={pickOrder} onDeleteOrder={deleteOrder} />}
+      {role === "warehouse" && tab === "orders" && <WarehouseOrdersView orders={orders} products={products} onPick={pickOrder} onDeleteOrder={deleteOrder} onCleanupOld={cleanupOldOrders} />}
       {role === "warehouse" && tab === "inventory" && (
         <InventoryView products={products} onAdd={addProduct} onUpdate={updateProduct} onRemove={removeProduct} categories={categories} onAddCategory={addCategory} />
       )}
