@@ -1097,7 +1097,7 @@ function App() {
   }, [ready]);
 
   const handleLogin = (r) => { setRole(r); setTab(r === "store" ? "order" : "orders"); };
-  const handleLogout = () => { setRole(null); setUserName(""); };
+  const handleLogout = () => { setRole(null); };
 
   const submitOrder = async (items, name) => {
     const order = { id: uid("ord"), storeName: name, items, status: "submitted", createdAt: Date.now() };
