@@ -1049,11 +1049,15 @@ function App() {
   const [ready, setReady] = useState(false);
   const [connected, setConnected] = useState(false);
   const [initError, setInitError] = useState(null);
-  const [role, setRole] = useState(null);
+  const [role, setRole] = useState(() => {
+    try { return localStorage.getItem("pgs_role") || null; } catch (e) { return null; }
+  });
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
-  const [tab, setTab] = useState("order");
+  const [tab, setTab] = useState(() => {
+    try { return localStorage.getItem("pgs_role") === "warehouse" ? "orders" : "order"; } catch (e) { return "order"; }
+  });
 
   // One-time seed: if the products collection is empty, load the starter catalog;
   // same for the categories doc, so "Small Bongs / Big Bongs / Bowls / Bubblers" exist from day one.
@@ -1096,8 +1100,15 @@ function App() {
     return () => { unsub1(); unsub2(); unsub3(); };
   }, [ready]);
 
-  const handleLogin = (r) => { setRole(r); setTab(r === "store" ? "order" : "orders"); };
-  const handleLogout = () => { setRole(null); };
+  const handleLogin = (r) => {
+    setRole(r);
+    setTab(r === "store" ? "order" : "orders");
+    try { localStorage.setItem("pgs_role", r); } catch (e) {}
+  };
+  const handleLogout = () => {
+    setRole(null);
+    try { localStorage.removeItem("pgs_role"); } catch (e) {}
+  };
 
   const submitOrder = async (items, name) => {
     const order = { id: uid("ord"), storeName: name, items, status: "submitted", createdAt: Date.now() };
