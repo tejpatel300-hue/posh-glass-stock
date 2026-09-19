@@ -752,10 +752,10 @@ function InventoryView({ products, onAdd, onUpdate, onRemove, categories, onAddC
     </button>
   );
 
-  function ProductRow({ p }) {
+  const renderRow = (p) => {
     const lp = useLongPress(() => setDeletingProduct(p));
     return (
-      <div {...lp} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 12, background: COLORS.surface, border: `1px solid ${COLORS.border}`, userSelect: "none" }}>
+      <div key={p.id} {...lp} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 12, background: COLORS.surface, border: `1px solid ${COLORS.border}`, userSelect: "none" }}>
         <button onClick={() => setEditingImageFor(p)} style={{ position: "relative", background: "none", border: "none", padding: 0, flexShrink: 0 }}>
           <Thumb product={p} />
           <div style={{ position: "absolute", bottom: -4, right: -4, width: 16, height: 16, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.accent, border: `2px solid ${COLORS.surface}` }}><Icon.Camera size={9} /></div>
@@ -789,12 +789,12 @@ function InventoryView({ products, onAdd, onUpdate, onRemove, categories, onAddC
         )}
       </div>
     );
-  }
+  };
 
-  function ProductCard({ p }) {
+  const renderCard = (p) => {
     const lp = useLongPress(() => setDeletingProduct(p));
     return (
-      <div {...lp} style={{ borderRadius: 12, overflow: "hidden", background: COLORS.surface, border: `1px solid ${COLORS.border}`, userSelect: "none" }}>
+      <div key={p.id} {...lp} style={{ borderRadius: 12, overflow: "hidden", background: COLORS.surface, border: `1px solid ${COLORS.border}`, userSelect: "none" }}>
         <button onClick={() => setEditingImageFor(p)} style={{ position: "relative", display: "block", width: "100%", aspectRatio: "1/1", background: "none", border: "none", padding: 0 }}>
           <Thumb product={p} size={"100%"} rounded={0} />
           <div style={{ position: "absolute", bottom: 6, right: 6, width: 24, height: 24, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", background: "#171512CC" }}><Icon.Camera size={12} /></div>
@@ -828,7 +828,7 @@ function InventoryView({ products, onAdd, onUpdate, onRemove, categories, onAddC
         </div>
       </div>
     );
-  }
+  };
 
   return (
     <div style={{ paddingBottom: 40 }}>
@@ -845,10 +845,10 @@ function InventoryView({ products, onAdd, onUpdate, onRemove, categories, onAddC
           ? categories.map((c) => grouped[c.key] && grouped[c.key].length > 0 ? (
               <div key={c.key} style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 12, marginBottom: 8, color: COLORS.textFaint, fontWeight: 600 }}>{c.label.toUpperCase()} · {grouped[c.key].length}</div>
-                <div style={{ display: view === "grid" ? "grid" : "flex", gridTemplateColumns: view === "grid" ? "1fr 1fr" : undefined, flexDirection: view === "list" ? "column" : undefined, gap: 10 }}>{grouped[c.key].map((p) => view === "grid" ? <ProductCard key={p.id} p={p} /> : <ProductRow key={p.id} p={p} />)}</div>
+                <div style={{ display: view === "grid" ? "grid" : "flex", gridTemplateColumns: view === "grid" ? "1fr 1fr" : undefined, flexDirection: view === "list" ? "column" : undefined, gap: 10 }}>{grouped[c.key].map(view === "grid" ? renderCard : renderRow)}</div>
               </div>
             ) : null)
-          : <div style={{ display: view === "grid" ? "grid" : "flex", gridTemplateColumns: view === "grid" ? "1fr 1fr" : undefined, flexDirection: view === "list" ? "column" : undefined, gap: 10 }}>{filtered.map((p) => view === "grid" ? <ProductCard key={p.id} p={p} /> : <ProductRow key={p.id} p={p} />)}</div>}
+          : <div style={{ display: view === "grid" ? "grid" : "flex", gridTemplateColumns: view === "grid" ? "1fr 1fr" : undefined, flexDirection: view === "list" ? "column" : undefined, gap: 10 }}>{filtered.map(view === "grid" ? renderCard : renderRow)}</div>}
         {filtered.length === 0 && <div style={{ fontSize: 14, textAlign: "center", padding: "40px 0", color: COLORS.textFaint }}>No products match.</div>}
       </div>
       {editingImageFor && (
@@ -1106,41 +1106,8 @@ function App() {
   );
 }
 
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { error: null, info: null };
-  }
-  static getDerivedStateFromError(error) {
-    return { error };
-  }
-  componentDidCatch(error, info) {
-    this.setState({ info });
-    console.error("React crash:", error, info);
-  }
-  render() {
-    if (this.state.error) {
-      const e = this.state.error;
-      return (
-        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#171512", padding: 24, fontFamily: "-apple-system,sans-serif" }}>
-          <div style={{ maxWidth: 480, textAlign: "left" }}>
-            <div style={{ color: "#E0995C", fontWeight: 700, fontSize: 16, marginBottom: 8, textAlign: "center" }}>⚠️ The app crashed</div>
-            <div style={{ color: "#F3EFE6", fontSize: 13, marginBottom: 12, textAlign: "center" }}>Screenshot this whole box and send it back.</div>
-            <div style={{ color: "#F3EFE6", fontSize: 12, fontFamily: "monospace", background: "#211E1A", padding: 10, borderRadius: 8, wordBreak: "break-word", border: "1px solid #3A352C", maxHeight: "50vh", overflow: "auto", whiteSpace: "pre-wrap" }}>
-              {String(e && (e.stack || e.message) || e)}
-              {this.state.info && this.state.info.componentStack ? "\n\n--- component stack ---" + this.state.info.componentStack : ""}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<ErrorBoundary><App /></ErrorBoundary>);
+root.render(<App />);
 </script>
 </body>
 </html>
-
