@@ -205,6 +205,28 @@ function Thumb({ product, size = 44, rounded = 8 }) {
   );
 }
 
+// Tap a thumbnail wrapped in this to zoom it full-screen — the tiny inline photos are hard to
+// make out, especially while picking, so this gives a proper close look without leaving the order.
+function ZoomableThumb({ product, size = 44, rounded = 8, label }) {
+  const [open, setOpen] = useState(false);
+  const [broken, setBroken] = useState(false);
+  return (
+    <>
+      <button onClick={() => product.image && !broken && setOpen(true)} style={{ padding: 0, border: "none", background: "none", flexShrink: 0, width: size, height: size, borderRadius: rounded }}>
+        <Thumb product={product} size={size} rounded={rounded} />
+      </button>
+      {open && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#000000EE", padding: 24 }} onClick={() => setOpen(false)}>
+          <img src={product.image} alt={label || product.sku || "Product"} onError={() => setBroken(true)}
+            style={{ maxWidth: "90vw", maxHeight: "70vh", objectFit: "contain", borderRadius: 12, border: `1px solid ${COLORS.borderStrong}` }} />
+          {label && <div style={{ color: COLORS.text, fontSize: 14, fontWeight: 600, marginTop: 16, textAlign: "center" }}>{label}</div>}
+          <div style={{ color: COLORS.textFaint, fontSize: 12, marginTop: 6 }}>Tap anywhere to close</div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function statusBadge(status) {
   const map = {
     submitted: { label: "Pending pick", bg: "#C97B3D22", fg: COLORS.warnText },
@@ -1077,10 +1099,10 @@ function WarehouseOrdersView({ orders, products, onPick, onDeleteOrder, onCleanu
                 <div style={{ borderRadius: 8, overflow: "hidden", marginBottom: 12, border: `1px solid ${COLORS.border}` }}>
                   {o.items.map((i, idx) => (
                     <div key={idx} style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, borderTop: idx === 0 ? "none" : `1px solid ${COLORS.border}` }}>
-                      <Thumb product={{ id: i.productId, image: productImage(i.productId) || i.image, sku: i.sku }} size={36} />
+                      <ZoomableThumb product={{ id: i.productId, image: productImage(i.productId) || i.image, sku: i.sku }} size={56} label={`${i.sku}${i.name && i.name !== i.sku ? " · " + i.name : ""}`} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "#D9D2C4" }}>{i.name || i.sku}</div>
-                        <div style={{ fontSize: 12, color: COLORS.textFaint }}>{money(i.unitCost)} / unit</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{i.sku}</div>
+                        <div style={{ fontSize: 12, color: COLORS.textFaint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{i.name && i.name !== i.sku ? `${i.name} · ` : ""}{money(i.unitCost)}/unit</div>
                         {i.remark && !isEditing && (
                           <div style={{ fontSize: 11, color: COLORS.accentText, marginTop: 2, fontStyle: "italic" }}>"{i.remark}"</div>
                         )}
